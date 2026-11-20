@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Layanan SPMB - SMP Al Azhar Syifa Budi Parahyangan</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #e0f2f1; margin: 0; padding: 15px; color: #333;
+    }
+    .container {
+      max-width: 600px; margin: 20px auto; background: #fff; border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,.1); padding: 25px; border-top: 6px solid #005a4f;
+    }
+    .header-box { text-align: center; margin-bottom: 20px; }
+    .header-box img { max-width: 100%; height: auto; max-height: 90px; }
+    .header-box h2 { margin: 10px 0 5px; color: #005a4f; font-size: 20px; }
+    .header-box p { margin: 0; color: #666; font-size: 13px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #444; }
+    .form-group input {
+      width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px;
+    }
+    .form-group input:focus { outline: 2px solid #00796b; outline-offset: 1px; border-color: #00796b; }
+    .hint { font-size: 12px; color: #666; margin-top: 4px; }
+    .btn-search {
+      width: 100%; background-color: #00796b; color: #fff; border: none; padding: 12px;
+      border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background .3s;
+    }
+    .btn-search:hover:not(:disabled) { background-color: #004d40; }
+    .btn-search:disabled { opacity: .65; cursor: wait; }
+    .result-box { display: none; margin-top: 25px; border-top: 2px dashed #b2dfdb; padding-top: 20px; }
+    .info-table { width: 100%; margin-bottom: 15px; font-size: 13px; line-height: 1.6; border-collapse: collapse; }
+    .info-table td { padding: 3px 0; vertical-align: top; }
+    .info-table td.label { font-weight: bold; width: 150px; color: #004d40; }
+    .jadwal-card {
+      background: #f7fbfb; border: 1px solid #b2dfdb; border-radius: 8px;
+      padding: 12px; margin-bottom: 10px; font-size: 13px;
+    }
+    .jadwal-card h4 { margin: 0 0 5px 0; color: #005a4f; font-size: 14px; }
+    .jadwal-card p { margin: 2px 0; color: #555; }
+    .jadwal-card .loc { font-weight: bold; color: #1565c0; word-break: break-all; }
+    .jadwal-card .loc a { color: #0056b3; font-weight: bold; text-decoration: underline; }
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .btn-pdf, .btn-print {
+      flex: 1; min-width: 150px; color: #fff; border: none; padding: 12px; border-radius: 8px;
+      font-weight: bold; cursor: pointer; text-align: center; font-size: 13px;
+    }
+    .btn-pdf { background-color: #8e24aa; }
+    .btn-print { background-color: #2e7d32; }
+    .btn-pdf:disabled { opacity: .65; cursor: wait; }
+    #pdfFallback { display: none; margin-top: 10px; font-size: 13px; text-align: center; color: #0056b3; }
+    #loadingText { display: none; text-align: center; margin-top: 15px; color: #00796b; font-weight: bold; }
+    #errorText { display: none; margin-top: 15px; padding: 10px 12px; background: #fdecea; border-left: 4px solid #c62828; color: #b71c1c; font-size: 13px; font-weight: 600; border-radius: 4px; }
+    .contact { margin-top: 18px; text-align: center; font-size: 12px; color: #666; }
+    .contact a { color: #0056b3; }
+    .notice-cat { display: none; border-left: 4px solid #ef6c00; background: #fff4e5; padding: 10px 12px; border-radius: 6px; margin-bottom: 14px; font-size: 13px; white-space: pre-line; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-box">
+      <img id="logoImg" alt="Logo ASBP" onerror="this.style.display='none'">
+      <h2>Layanan Cek Jadwal &amp; Kartu Tes SPMB</h2>
+      <p id="subJudul"></p>
+    </div>
+    <div class="form-group">
+      <label for="noPeserta">Nomor Calon Murid / No. Peserta</label>
+      <input type="text" id="noPeserta" placeholder="Contoh: 2728.4.01001" autocomplete="off" autocapitalize="characters">
+    </div>
+    <div class="form-group">
+      <label for="noWA">Nomor WhatsApp Orang Tua (Ayah/Ibu)</label>
+      <input type="tel" id="noWA" inputmode="tel" placeholder="Nomor WhatsApp yang didaftarkan" autocomplete="tel">
+      <div class="hint">Gunakan nomor yang sama dengan yang Anda isi saat pendaftaran.</div>
+    </div>
+    <button id="btnCari" class="btn-search" type="button" onclick="prosesCari()">&#128269; Cek Jadwal Saya</button>
+    <div id="loadingText" role="status">Sedang mencari data... &#9203;</div>
+    <div id="errorText" role="alert"></div>
+    <div class="result-box" id="resultArea">
+      <h3 style="color:#005a4f;margin-top:0;font-size:16px;">Hasil Pencarian Jadwal</h3>
+      <div id="catatanBox" class="notice-cat"></div>
+      <table class="info-table">
+        <tr><td class="label">No. Calon Murid</td><td id="resNoP">: -</td></tr>
+        <tr><td class="label">Nama Calon Murid</td><td id="resNama">: -</td></tr>
+        <tr><td class="label">Asal Sekolah</td><td id="resSekolah">: -</td></tr>
+        <tr><td class="label">Gelombang / Sesi</td><td id="resGelSesi">: -</td></tr>
+      </table>
+      <div id="jadwalList"></div>
+      <div class="btn-group">
+        <button id="btnPdf" class="btn-pdf" type="button" onclick="unduhPDFKartu()">&#128196; Unduh Kartu Tes (PDF)</button>
+        <button class="btn-print" type="button" onclick="cetakInstan()">&#128424;&#65039; Cetak Instan (A4)</button>
+      </div>
+      <a id="pdfFallback" href="#" target="_blank">Unduhan tidak mulai? Ketuk di sini untuk membuka PDF.</a>
+    </div>
+    <div class="contact" id="contactBox"></div>
+  </div>
+
+  <script src="shared.js"></script>
+  <script>
+    var CFG = Object.assign({}, FALLBACK_CFG);
+    var currentData = null;
+    var currentToken = null;
+    var busy = false;
+
+    function $(id) { return document.getElementById(id); }
+
+    function applyConfig(cfg) {
+      CFG = Object.assign({}, FALLBACK_CFG, cfg || {});
+      $('logoImg').src = CFG.logo;
+      $('subJudul').textContent = CFG.sekolah + ' T.A ' + CFG.ta;
+      if (CFG.adminWA) {
+        $('contactBox').innerHTML = 'Kendala? Hubungi admin: <a href="https://wa.me/' + esc(CFG.adminWA) +
+          '" target="_blank" rel="noopener noreferrer">WhatsApp Admin SMP</a>';
+      }
+    }
+
+    function initPage() {
+      injectSharedCss();
+      applyConfig(FALLBACK_CFG);
+      callBackend('getConfig', [], function (res) {
+        if (res && res.success && res.config) applyConfig(res.config);
+      }, function () {});
+      ['noPeserta', 'noWA'].forEach(function (id) {
+        $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter') prosesCari(); });
+      });
+    }
+
+    function setBusy(v) {
+      busy = v;
+      $('btnCari').disabled = v;
+      $('loadingText').style.display = v ? 'block' : 'none';
+    }
+
+    function showError(msg) {
+      var el = $('errorText');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function prosesCari() {
+      if (busy) return;
+      var noP = $('noPeserta').value.trim();
+      var noWA = $('noWA').value.trim();
+      if (!noP) { showError('Mohon masukkan Nomor Calon Murid Anda.'); $('noPeserta').focus(); return; }
+      $('errorText').style.display = 'none';
+      $('resultArea').style.display = 'none';
+      $('pdfFallback').style.display = 'none';
+      currentData = null; currentToken = null;
+      setBusy(true);
+
+      callBackend('cariData', [noP, noWA], function (res) {
+        setBusy(false);
+        if (res && res.status === 'success') {
+          currentData = res.data;
+          currentToken = res.token;
+          renderHasil(currentData);
+        } else {
+          showError(res && res.message ? res.message : 'Terjadi kesalahan. Silakan coba lagi.');
+        }
+      }, function () {
+        setBusy(false);
+        showError('Gagal terhubung ke server. Periksa koneksi internet Anda lalu coba lagi.');
+      });
+    }
+
+    function renderHasil(d) {
+      $('resNoP').textContent = ': ' + (d.no || '-');
+      $('resNama').textContent = ': ' + (d.nama || '-');
+      $('resSekolah').textContent = ': ' + (d.sekolah || '-');
+      $('resGelSesi').textContent = ': ' + (d.gel || '-') + ' / ' + (d.sesi || '-');
+      var cb = $('catatanBox');
+      if (d.catatan) { cb.innerHTML = '<b>&#128221; Catatan Panitia:</b><br>' + linkify(d.catatan); cb.style.display = 'block'; }
+      else { cb.innerHTML = ''; cb.style.display = 'none'; }
+      var h = '';
+      (d.jadwal || []).forEach(function (j) {
+        h += '<div class="jadwal-card">' +
+             '<h4>' + esc(j.ikon) + ' ' + esc(j.nama) + '</h4>' +
+             '<p>&#128197; ' + esc(j.tgl || '-') + ' (' + esc(j.jam || '-') + ')</p>' +
+             '<p class="loc">&#128205; ' + esc(j.labelTempat) + ': ' + linkify(j.tempat) + '</p>' +
+             '</div>';
+      });
+      $('jadwalList').innerHTML = h;
+      $('resultArea').style.display = 'block';
+      $('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function unduhPDFKartu() {
+      if (!currentToken) return;
+      var btn = $('btnPdf');
+      btn.disabled = true;
+      btn.textContent = 'Membuat PDF Kartu Tes... \u23F3';
+      function reset() { btn.disabled = false; btn.innerHTML = '&#128196; Unduh Kartu Tes (PDF)'; }
+
+      callBackend('generatePDFOrtu', [currentToken], function (res) {
+        reset();
+        if (res && res.success) {
+          var url = downloadBase64(res.dataUrl, res.filename);
+          var fb = $('pdfFallback');
+          fb.href = url; fb.style.display = 'block';
+        } else {
+          toast('Gagal membuat PDF: ' + (res && res.message ? res.message : 'terjadi kesalahan'), 'err');
+        }
+      }, function () {
+        reset();
+        toast('Gagal terhubung ke server. Coba lagi.', 'err');
+      });
+    }
+
+    function cetakInstan() {
+      if (!currentData) return;
+      printKartu(currentData, CFG, function () {
+        callBackend('catatCetakOrtu', [currentToken], function () {}, function () {});
+      });
+    }
+
+    window.addEventListener('load', initPage);
+  </script>
+</body>
+</html>
